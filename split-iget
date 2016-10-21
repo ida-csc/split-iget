@@ -1,0 +1,56 @@
+#!/bin/sh
+# 20160816 CSC - www.csc.fi - Jopa
+
+# split-iget, a simple script to iget a bunch of split files from IDA
+# Needs 3 parameters:
+#         file name without the sequence part
+#         sequence number width, the count of digits or chars
+#         last sequence number or string
+# Example: split-iget "/ida/org/proj/stuff/some.tar.gz.part-" 2 3
+#          /ida/org/proj/stuff/some.tar.gz.part-00
+#          /ida/org/proj/stuff/some.tar.gz.part-01
+#          /ida/org/proj/stuff/some.tar.gz.part-02
+#          /ida/org/proj/stuff/some.tar.gz.part-03
+# Example: split-iget "/ida/org/proj/stuff/some.tar.gz.part-" 2 ac
+#          /ida/org/proj/stuff/some.tar.gz.part-aa
+#          /ida/org/proj/stuff/some.tar.gz.part-ab
+#          /ida/org/proj/stuff/some.tar.gz.part-ac
+
+REQ_CMD="printf"
+CMD_PATH=`/usr/bin/which "$REQ_CMD"`
+if [ ! -x "$CMD_PATH" ]; then
+	echo "Can't find \"${REQ_CMD}\" in your \$PATH"
+	exit 1
+fi
+
+if [ $# -ne 3 ]; then
+        echo "Usage: $0 file-name-partial number-digits max-number"
+        echo "       example:  $0 \"/ida/org/proj/stuff/some.tar.gz.part-\" 2 5"
+        echo "       example:  $0 \"/ida/org/proj/stuff/some.tar.gz.part-\" 2 bd"
+	exit 1
+fi
+
+case $3 in
+	[a-z]*)
+		z=""
+		eval '
+			for k in {1..'"$2"'}; do
+				z="${z}{a..z}"
+			done'
+		for SEQ in `eval echo $z`; do
+			echo "$1$SEQ"
+			iget "$1$SEQ"
+			if [ "$SEQ" == "$3" ]; then break
+			fi
+		done
+		;;
+	*)
+		eval '
+			for i in {0..'"$3"'}; do
+				SEQ=`printf "%0${2}d" "$i"`
+				echo "$1$SEQ"
+				iget "$1$SEQ"
+			done'
+		;;
+esac
+
